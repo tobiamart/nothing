@@ -92,6 +92,7 @@ public class FredBoatShard extends FredBoat {
                         .setGame(Game.of(Config.CONFIG.getGame()))
                         .setBulkDeleteSplittingEnabled(true)
                         .setEnableShutdownHook(false)
+                        .useSharding(shardId, Config.CONFIG.getNumShards())
                         .setReconnectQueue(connectQueue);
 
                 if(listener != null) {
@@ -113,9 +114,6 @@ public class FredBoatShard extends FredBoat {
                         && !System.getProperty("os.arch").equalsIgnoreCase("darwin")
                         && !System.getProperty("os.name").equalsIgnoreCase("Mac OS X")) {
                     builder.setAudioSendFactory(new NativeAudioSendFactory());
-                }
-                if (Config.CONFIG.getNumShards() > 1) {
-                    builder.useSharding(shardId, Config.CONFIG.getNumShards());
                 }
                 try {
                     connectQueue.requestCoin(shardId);
