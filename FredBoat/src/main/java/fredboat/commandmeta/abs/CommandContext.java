@@ -25,7 +25,7 @@
 
 package fredboat.commandmeta.abs;
 
-import fredboat.Config;
+import fredboat.command.moderation.PrefixCommand;
 import fredboat.commandmeta.CommandRegistry;
 import fredboat.messaging.CentralMessaging;
 import fredboat.messaging.internal.Context;
@@ -68,9 +68,9 @@ public class CommandContext extends Context {
     @Nonnull public final Member invoker;
     @Nonnull public final Message msg;
 
-    @Nonnull public String prefix = Config.CONFIG.getPrefix();  // the prefix that this context was called with. could be a mention, default prefix or a custom one
+//    @Nonnull public String prefix = Config.CONFIG.getPrefix();  // the prefix that is in effect in this guild
+             public boolean isMention = false;                  // whether a mention was used to trigger this command
     @Nonnull public String trigger = "";                        // the command trigger, e.g. "play", or "p", or "pLaY", whatever the user typed
-    @Nonnull public String cmdName = "";                        // this is the fredboat internal command name, e.g. "play"
     @Nonnull public String[] args = new String[0];              // the arguments split by whitespace, excluding prefix and trigger
     @Nonnull public String rawArgs = "";                        // raw arguments excluding prefix and trigger, trimmed
     @SuppressWarnings("ConstantConditions")//the parsing code handles setting this to a nonnull value
@@ -85,25 +85,31 @@ public class CommandContext extends Context {
         String selfId = DiscordUtil.getApplicationInfo(event.getJDA()).botId;
         String raw = event.getMessage().getRawContent();
 
-        String triggeredPrefix;
         String input;
+        boolean isMention = false;
         Matcher mentionMatcher = MENTION_PREFIX.matcher(raw);
         // either starts with a mention of us
         if (mentionMatcher.find() && mentionMatcher.group(2).equals(selfId)) {
-            triggeredPrefix = mentionMatcher.group(1);
             input = mentionMatcher.group(3).trim();
+            isMention = true;
         }
-        // or starts with our prefix
-        else if (raw.startsWith(Config.CONFIG.getPrefix())) {
-            triggeredPrefix = Config.CONFIG.getPrefix();
-            input = raw.substring(triggeredPrefix.length());
-        } else {
-            //no match
-            return null;
+        // or starts with a custom/default prefix
+        else {
+            String prefix = PrefixCommand.giefPrefix(event.getGuild().getIdLong());
+            if (raw.startsWith(prefix)) {
+                input = raw.substring(prefix.length());
+            } else {
+                //no match neither mention nor custom/default prefix
+                return null;
+            }
         }
         input = input.trim();// eliminate possible whitespace between the mention/prefix and the rest of the input
         if (input.isEmpty()) {
-            return null; //no command will be detectable from an empty input
+            if (isMention) { //just a mention and nothing else? trigger the prefix command
+                input = "prefix";
+            } else {
+                return null; //no command will be detectable from an empty input
+            }
         }
 
         String[] args = input.split("\\s+"); //split by any length of white space characters (including new lines)
@@ -124,9 +130,8 @@ public class CommandContext extends Context {
                     event.getMember(),
                     event.getMessage());
 
-            context.prefix = triggeredPrefix;
+            context.isMention = isMention;
             context.trigger = commandTrigger;
-            context.cmdName = entry.name;
             context.command = entry.command;
             context.args = Arrays.copyOfRange(args, 1, args.length);//exclude args[0] that contains the command trigger
             context.rawArgs = input.replaceFirst(commandTrigger, "").trim();
@@ -134,7 +139,7 @@ public class CommandContext extends Context {
         }
     }
 
-    private CommandContext(Guild guild, TextChannel channel, Member invoker, Message message) {
+    private CommandContext(@Nonnull Guild guild, @Nonnull TextChannel channel, @Nonnull Member invoker, @Nonnull Message message) {
         this.guild = guild;
         this.channel = channel;
         this.invoker = invoker;
@@ -146,7 +151,7 @@ public class CommandContext extends Context {
      */
     public void deleteMessage() {
         TextChannel tc = msg.getTextChannel();
-        if (tc != null && hasPermissions(tc, Permission.MESSAGE_MANAGE)) {
+        if (tc != null && hasPermissions(tc, Permission.MESSAGE_MANAGE, Permission.MESSAGE_READ)) {
             CentralMessaging.deleteMessage(msg);
         }
     }
@@ -156,11 +161,7 @@ public class CommandContext extends Context {
      * be used over Message#getMentions()
      */
     public List<User> getMentionedUsers() {
-        Matcher mentionInPrefix = MENTION_PREFIX.matcher(prefix);
-        if (!mentionInPrefix.matches()) {
-            // no match in the prefix, we good
-            return msg.getMentionedUsers();
-        } else {
+        if (isMention) {
             //remove the first mention
             List<User> mentions = new ArrayList<>(msg.getMentionedUsers());
             if (!mentions.isEmpty()) {
@@ -170,11 +171,20 @@ public class CommandContext extends Context {
                 // low priority, this is mostly a cosmetic issue
             }
             return mentions;
+        } else {
+            return msg.getMentionedUsers();
         }
     }
 
     public boolean hasArguments() {
         return args.length > 0 && !rawArgs.isEmpty();
+    }
+
+    /**
+     * Convenience method to get the prefix of the guild of this context.
+     */
+    public String getPrefix() {
+        return PrefixCommand.giefPrefix(guild.getIdLong());
     }
 
     @Nonnull
