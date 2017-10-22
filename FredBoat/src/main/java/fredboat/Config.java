@@ -82,7 +82,7 @@ public class Config {
     private String game = "";
     private List<LavalinkHost> lavalinkHosts = new ArrayList<>();
     private String openWeatherKey;
-    private String sentryDsn;
+    private String dikeUrl;
 
     //testing related stuff
     private String testBotToken;
@@ -125,12 +125,14 @@ public class Config {
             config.keySet().forEach((String key) -> config.putIfAbsent(key, ""));
 
             //create the sentry appender as early as possible
-            sentryDsn = (String) creds.getOrDefault("sentryDsn", "");
+            String sentryDsn = (String) creds.getOrDefault("sentryDsn", "");
             if (!sentryDsn.isEmpty()) {
                 SentryDsnCommand.turnOn(sentryDsn);
             } else {
                 SentryDsnCommand.turnOff();
             }
+
+            dikeUrl = (String) creds.getOrDefault("dikeUrl", null);
 
             // Determine distribution
             if ((boolean) config.getOrDefault("patron", false)) {
@@ -499,5 +501,9 @@ public class Config {
 
     public boolean isHttpEnabled() {
         return httpAudio;
+    }
+
+    public String getDikeUrl() {
+        return dikeUrl;
     }
 }

@@ -51,9 +51,9 @@
         </dependency>
         <dependency>
             <!-- discord api -->
-            <groupId>net.dv8tion</groupId>
+            <groupId>com.github.natanbc</groupId>
             <artifactId>JDA</artifactId>
-            <version>3.3.1_286</version>
+            <version>878c223aad5ce2784613e44485808c2adaa8f565</version>
         </dependency>
         <dependency>
             <!-- because JDA's gradle doesn't make a good pom and the scope isn't set correctly -->
@@ -238,12 +238,6 @@
     <profiles>
         <profile>
             <id>default</id>
-            <activation>
-                <property>
-                    <name>dev</name>
-                    <value>!true</value>
-                </property>
-            </activation>
             <dependencies>
                 <dependency>
                     <groupId>com.github.Frederikam</groupId>
@@ -260,12 +254,6 @@
         </profile>
         <profile>
             <id>dev</id>
-            <activation>
-                <property>
-                    <name>dev</name>
-                    <value>true</value>
-                </property>
-            </activation>
             <dependencies>
                 <dependency>
                     <groupId>lavalink</groupId>
